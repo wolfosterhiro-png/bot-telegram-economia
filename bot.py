@@ -250,6 +250,11 @@ def guia(message):
         "1. Primero usa /start para registrarte y recibir tu ficha.\n"
         "2. Luego selecciona tu profesión con /profesion <nombre>.\n"
         "3. Después podrás usar /work para ganar dinero y /pay para transferirlo."
+
+        "recuerda usar los comandos en sus respectivos temas"
+
+        "/start y /Profesion en la recepcion"
+        "/Work y /pay en el banco"        
     )
     bot.reply_to(message, texto)
 
@@ -258,3 +263,4 @@ def guia(message):
 # =========================
 print("🤖 Sistema económico activo y persistente...")
 bot.infinity_polling()
+
