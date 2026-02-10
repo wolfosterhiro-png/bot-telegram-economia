@@ -71,6 +71,8 @@ def start(message):
             "【NOMBRE】\n"
             "【EDAD】\n"
             "【SEXO】\n"
+             "【ORIENTACION】\n"
+             "【ALTURA】\n"
             "【TRABAJO】 (elige después con un mensaje aparte usando el comando /profesion)\n"
             "(IMPORTANTE: la profesión que elijas será permanente)\n\n"
             "Profesiones disponibles:\n"
@@ -82,7 +84,7 @@ def start(message):
             "Chofer: $50 día\n"
             "Artista: $30 día (20% de probabilidad de bono 100$)\n"
             "Streamer: $30 día (15% de probabilidad de bono 70$)\n"
-            "TS: gana solo si otro usuario lo contrata\n"
+            "TS (Trabajador/a Sexual): gana solo si otro usuario lo contrata\n"
             "Mercenario: $100 día (50% de probabilidad de lesión, no trabaja 7 días)\n"
             "Mafioso: $20 día (50% de probabilidad de bono 200$)\n\n"
             "Después de llenar la ficha, envía un mensaje **separado** usando:\n"
@@ -90,6 +92,8 @@ def start(message):
             "Por ejemplo:\n"
             "   /profesion medico\n\n"
             "¡Listo! Luego recibirás $1000 de cortesía y podrás usar /work, /balance y /pay"
+
+            
         )
     else:
         bot.reply_to(message, "Ya tienes una cuenta activa, usa tus comandos: /balance, /work, /pay")
@@ -251,3 +255,4 @@ def pay(message):
 # =========================
 print("Sistema económico activo y listo...")
 bot.infinity_polling(skip_pending=True)
+
