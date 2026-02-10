@@ -66,32 +66,30 @@ def start(message):
         bot.reply_to(
             message,
             f"🎉 Bienvenido a Lust Tower, {message.from_user.first_name}!\n"
-            "Aquí manejamos nuestra propia economía, por favor llena la siguiente ficha para recibir $1000 de cortesía.\n\n"
+            "Aquí manejamos nuestra propia economía. Por favor llena la siguiente ficha:\n\n"
             "『INFORMACION DEL CLIENTE』\n"
             "【NOMBRE】\n"
             "【EDAD】\n"
             "【SEXO】\n"
-            "【TRABAJO】\n"
-            "(IMPORTANTE: Este grupo maneja un sistema económico para rolear, la profesión que elijas será permanente)\n\n"
+            "【TRABAJO】 (elige después con un mensaje aparte usando el comando /profesion)\n"
+            "(IMPORTANTE: la profesión que elijas será permanente)\n\n"
             "Profesiones disponibles:\n"
-            "/profesion medico\n"
-            "/profesion programador\n"
-            "/profesion policia\n"
-            "/profesion inversionista\n"
-            "/profesion mecanico\n"
-            "/profesion chofer\n"
-            "/profesion artista\n"
-            "/profesion streamer\n"
-            "/profesion mercenario\n"
-            "/profesion mafioso\n"
-            "/profesion ts\n\n"
-            "【ALTURA】\n"
-            "【ORIENTACION】\n"
-            "【GUSTOS】\n"
-            "【DISGUSTOS】\n"
-            "【HISTORIA DE VIDA】\n"
-            "【APARIENCIA】\n"
-            "(Adjuntar Foto)"
+            "Medico: +30$ por día (30% de probabilidad de bono 70$)\n"
+            "Programador: $60 día (10% de probabilidad de perder $20)\n"
+            "Policia: $75 día (20% de probabilidad de bono 100$)\n"
+            "Inversionista: $100 día (5% de probabilidad de perder $100)\n"
+            "Mecanico: $50 día\n"
+            "Chofer: $50 día\n"
+            "Artista: $30 día (20% de probabilidad de bono 100$)\n"
+            "Streamer: $30 día (15% de probabilidad de bono 70$)\n"
+            "TS: gana solo si otro usuario lo contrata\n"
+            "Mercenario: $100 día (50% de probabilidad de lesión, no trabaja 7 días)\n"
+            "Mafioso: $20 día (50% de probabilidad de bono 200$)\n\n"
+            "Después de llenar la ficha, envía un mensaje **separado** usando:\n"
+            "   /profesion nombre_de_tu_profesion\n\n"
+            "Por ejemplo:\n"
+            "   /profesion medico\n\n"
+            "¡Listo! Luego recibirás $1000 de cortesía y podrás usar /work, /balance y /pay"
         )
     else:
         bot.reply_to(message, "Ya tienes una cuenta activa, usa tus comandos: /balance, /work, /pay")
@@ -187,6 +185,14 @@ def work(message):
 
     texto += f"💰 Ganancia total: ${ganancia}"
     bot.reply_to(message, texto)
+
+# =========================
+# BALANCE
+# =========================
+@bot.message_handler(commands=["balance"])
+def balance(message):
+    user = get_user(message.from_user.id)
+    bot.reply_to(message, f"💰 Tu saldo actual es: ${user['money']}")
 
 # =========================
 # PAY
