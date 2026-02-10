@@ -7,7 +7,7 @@ import time
 # =========================
 # CONFIGURACIÓN BOT
 # =========================
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")  # Tu token de bot en Railway
 bot = telebot.TeleBot(TOKEN)
 
 DATA_FILE = "users.json"
@@ -30,7 +30,7 @@ def get_user(user_id):
     user_id = str(user_id)
     if user_id not in users:
         users[user_id] = {
-            "money": 1000,
+            "money": 0,
             "profesion": None,
             "ultimo_work": 0
         }
@@ -50,7 +50,8 @@ PROFESIONES = {
     "artista": {"salario": 30, "bonus_chance": 0.20, "bonus": 100},
     "streamer": {"salario": 30, "bonus_chance": 0.15, "bonus": 70},
     "mercenario": {"salario": 100, "bonus_chance": 0.50, "bonus": -100},
-    "mafioso": {"salario": 20, "bonus_chance": 0.50, "bonus": 200}
+    "mafioso": {"salario": 20, "bonus_chance": 0.50, "bonus": 200},
+    "ts": {"salario": 0, "bonus_chance": 0, "bonus": 0}  # Se paga solo por contrata
 }
 
 # =========================
@@ -59,21 +60,41 @@ PROFESIONES = {
 @bot.message_handler(commands=["start"])
 def start(message):
     user = get_user(message.from_user.id)
-    bot.reply_to(
-        message,
-        "🪙 Bienvenido al sistema económico de rol\n\n"
-        f"💰 Dinero inicial: ${user['money']}\n\n"
-        "Comandos:\n"
-        "/profesion nombre\n"
-        "/work\n"
-        "/balance\n"
-        "/pay @usuario monto"
-    )
 
-@bot.message_handler(commands=["balance"])
-def balance(message):
-    user = get_user(message.from_user.id)
-    bot.reply_to(message, f"💰 Tu saldo actual: ${user['money']}")
+    if user["money"] == 0:
+        # Primera vez: ficha y bienvenida
+        bot.reply_to(
+            message,
+            f"🎉 Bienvenido a Lust Tower, {message.from_user.first_name}!\n"
+            "Aquí manejamos nuestra propia economía, por favor llena la siguiente ficha para recibir $1000 de cortesía.\n\n"
+            "『INFORMACION DEL CLIENTE』\n"
+            "【NOMBRE】\n"
+            "【EDAD】\n"
+            "【SEXO】\n"
+            "【TRABAJO】\n"
+            "(IMPORTANTE: Este grupo maneja un sistema económico para rolear, la profesión que elijas será permanente)\n\n"
+            "Profesiones disponibles:\n"
+            "/profesion medico\n"
+            "/profesion programador\n"
+            "/profesion policia\n"
+            "/profesion inversionista\n"
+            "/profesion mecanico\n"
+            "/profesion chofer\n"
+            "/profesion artista\n"
+            "/profesion streamer\n"
+            "/profesion mercenario\n"
+            "/profesion mafioso\n"
+            "/profesion ts\n\n"
+            "【ALTURA】\n"
+            "【ORIENTACION】\n"
+            "【GUSTOS】\n"
+            "【DISGUSTOS】\n"
+            "【HISTORIA DE VIDA】\n"
+            "【APARIENCIA】\n"
+            "(Adjuntar Foto)"
+        )
+    else:
+        bot.reply_to(message, "Ya tienes una cuenta activa, usa tus comandos: /balance, /work, /pay")
 
 # =========================
 # PROFESIÓN
@@ -98,12 +119,36 @@ def profesion(message):
         return
 
     user["profesion"] = nombre
+    user["money"] = 1000  # Dinero de cortesía al elegir profesión
     save_users()
 
     bot.reply_to(
         message,
         f"✅ Profesión asignada: {nombre.capitalize()}\n"
-        "⚠️ Esta elección es permanente"
+        f"💰 ¡Gracias por unirte a Lust Tower! Tus $1000 de cortesía han sido acreditados.\n\n"
+        "Ya puedes usar /work, /balance y /pay"
+    )
+
+# =========================
+# COMANDO PARA RESETEAR PROFESIÓN (modo prueba)
+# =========================
+@bot.message_handler(commands=["resetprof"])
+def reset_profesion(message):
+    user = get_user(message.from_user.id)
+
+    if not user["profesion"]:
+        bot.reply_to(message, "❌ No tienes ninguna profesión asignada")
+        return
+
+    nombre = user["profesion"]
+    user["profesion"] = None
+    user["money"] = 0  # Opcional: reinicia dinero
+    save_users()
+
+    bot.reply_to(
+        message,
+        f"♻️ Tu profesión '{nombre.capitalize()}' ha sido removida.\n"
+        "Ahora puedes usar /profesion para elegir otra."
     )
 
 # =========================
@@ -194,10 +239,9 @@ def pay(message):
 
     bot.reply_to(
         message,
-        f"💸 Transferencia exitosa\n"
-        f"Enviado: ${monto}"
+        f"💸 Transferencia exitosa\nEnviado: ${monto}"
     )
 
 # =========================
-print("Sistema económico activo y completo...")
-bot.infinity_polling()
+print("Sistema económico activo y listo...")
+bot.infinity_polling(skip_pending=True)
