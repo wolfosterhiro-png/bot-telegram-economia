@@ -2,19 +2,18 @@ import os
 import json
 import telebot
 import random
-import time
+from datetime import datetime, timedelta
 
 # =========================
-# CONFIGURACIÓN BOT
+# CONFIGURACIÓN DEL BOT
 # =========================
-TOKEN = os.getenv("BOT_TOKEN")  # Tu token de bot en Railway
+TOKEN = os.getenv("BOT_TOKEN")  # O tu token directamente como string
 bot = telebot.TeleBot(TOKEN)
 
 DATA_FILE = "users.json"
-COOLDOWN_WORK = 86400  # 24 horas
 
 # =========================
-# BASE DE DATOS
+# BASE DE DATOS DE USUARIOS
 # =========================
 if os.path.exists(DATA_FILE):
     with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -24,7 +23,7 @@ else:
 
 def save_users():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=4)
+        json.dump(users, f)
 
 def get_user(user_id):
     user_id = str(user_id)
@@ -32,166 +31,141 @@ def get_user(user_id):
         users[user_id] = {
             "money": 0,
             "profesion": None,
-            "ultimo_work": 0
+            "last_work": None,
+            "bono_inicio": False  # indica si ya recibió los $1000 iniciales
         }
         save_users()
     return users[user_id]
 
 # =========================
-# PROFESIONES
+# DEFINICIÓN DE PROFESIONES
 # =========================
 PROFESIONES = {
-    "medico": {"salario": 30, "bonus_chance": 0.30, "bonus": 70},
-    "programador": {"salario": 60, "bonus_chance": 0.10, "bonus": -20},
-    "policia": {"salario": 75, "bonus_chance": 0.20, "bonus": 100},
-    "inversionista": {"salario": 100, "bonus_chance": 0.05, "bonus": -100},
-    "mecanico": {"salario": 50, "bonus_chance": 0, "bonus": 0},
-    "chofer": {"salario": 50, "bonus_chance": 0, "bonus": 0},
-    "artista": {"salario": 30, "bonus_chance": 0.20, "bonus": 100},
-    "streamer": {"salario": 30, "bonus_chance": 0.15, "bonus": 70},
-    "mercenario": {"salario": 100, "bonus_chance": 0.50, "bonus": -100},
-    "mafioso": {"salario": 20, "bonus_chance": 0.50, "bonus": 200},
-    "ts": {"salario": 0, "bonus_chance": 0, "bonus": 0}  # Se paga solo por contrata
+    "medico":      {"salario": 30,  "bono_prob": 0.30, "bono": 70,  "penal_prob":0,  "penal":0,   "bloqueo":0},
+    "programador": {"salario": 60,  "bono_prob": 0,    "bono":0,    "penal_prob":0.10,"penal":20,"bloqueo":0},
+    "policia":     {"salario": 75,  "bono_prob": 0.20, "bono":100, "penal_prob":0,  "penal":0,   "bloqueo":0},
+    "inversionista":{"salario":100, "bono_prob": 0,    "bono":0,   "penal_prob":0.05,"penal":100,"bloqueo":0},
+    "mecanico":    {"salario": 50,  "bono_prob":0,     "bono":0,   "penal_prob":0,  "penal":0,   "bloqueo":0},
+    "chofer":      {"salario": 50,  "bono_prob":0,     "bono":0,   "penal_prob":0,  "penal":0,   "bloqueo":0},
+    "artista":     {"salario": 30,  "bono_prob":0.20,  "bono":100,"penal_prob":0,  "penal":0,   "bloqueo":0},
+    "streamer":    {"salario": 30,  "bono_prob":0.15,  "bono":70, "penal_prob":0,  "penal":0,   "bloqueo":0},
+    "ts":          {"salario": 0,   "bono_prob":0,     "bono":0,   "penal_prob":0,  "penal":0,   "bloqueo":0},  # gana solo si otro usuario lo paga
+    "mercenario":  {"salario":100,  "bono_prob":0,     "bono":0,   "penal_prob":0.50,"penal":0,"bloqueo":7},
+    "mafioso":     {"salario":20,   "bono_prob":0.50,  "bono":200,"penal_prob":0,  "penal":0,   "bloqueo":0},
 }
 
 # =========================
-# COMANDOS
+# COMANDOS DE PROFESIÓN
+# =========================
+@bot.message_handler(commands=["profesion"])
+def elegir_profesion(message):
+    user = get_user(message.from_user.id)
+    partes = message.text.split()
+
+    if len(partes) < 2:
+        bot.reply_to(message, "❗ Para elegir tu profesión, usa: /profesion <nombre>\nEjemplo: /profesion medico")
+        return
+
+    profesion = partes[1].lower()
+
+    if profesion not in PROFESIONES:
+        bot.reply_to(message, "❌ Profesión inválida. Revisa la lista de profesiones disponibles.")
+        return
+
+    # Si ya tiene profesión y cambia, no reinicia el dinero ni el bono inicial
+    if user["profesion"] is None:
+        if not user["bono_inicio"]:
+            user["money"] += 1000
+            user["bono_inicio"] = True
+            bot.reply_to(message, f"✅ Profesión registrada como {profesion.capitalize()}. 🎁 Has recibido $1000 de cortesía por unirte!")
+        else:
+            bot.reply_to(message, f"✅ Profesión registrada como {profesion.capitalize()}.")
+    else:
+        bot.reply_to(message, f"⚠️ Has cambiado tu profesión a {profesion.capitalize()}. Tu dinero actual se mantiene.")
+
+    user["profesion"] = profesion
+    save_users()
+
+@bot.message_handler(commands=["resetprof"])
+def reset_profesion(message):
+    user = get_user(message.from_user.id)
+    if user["profesion"] is None:
+        bot.reply_to(message, "❌ No tienes ninguna profesión asignada.")
+        return
+    user["profesion"] = None
+    save_users()
+    bot.reply_to(message, "✅ Profesión eliminada. Ahora puedes elegir otra con /profesion <nombre>.")
+
+# =========================
+# COMANDO /START
 # =========================
 @bot.message_handler(commands=["start"])
 def start(message):
     user = get_user(message.from_user.id)
-
-    if user["money"] == 0:
-        # Primera vez: ficha y bienvenida
-        bot.reply_to(
-            message,
-            f"🎉 Bienvenido a Lust Tower, {message.from_user.first_name}!\n"
-            "Aquí manejamos nuestra propia economía. Por favor llena la siguiente ficha:\n\n"
-            "『INFORMACION DEL CLIENTE』\n"
-            "【NOMBRE】\n"
-            "【EDAD】\n"
-            "【SEXO】\n"
-             "【ORIENTACION】\n"
-             "【ALTURA】\n"
-            "【TRABAJO】 (elige después con un mensaje aparte usando el comando /profesion)\n"
-            "(IMPORTANTE: la profesión que elijas será permanente)\n\n"
-            "Profesiones disponibles:\n"
-            "Medico: +30$ por día (30% de probabilidad de bono 70$)\n"
-            "Programador: $60 día (10% de probabilidad de perder $20)\n"
-            "Policia: $75 día (20% de probabilidad de bono 100$)\n"
-            "Inversionista: $100 día (5% de probabilidad de perder $100)\n"
-            "Mecanico: $50 día\n"
-            "Chofer: $50 día\n"
-            "Artista: $30 día (20% de probabilidad de bono 100$)\n"
-            "Streamer: $30 día (15% de probabilidad de bono 70$)\n"
-            "TS (Trabajador/a Sexual): gana solo si otro usuario lo contrata\n"
-            "Mercenario: $100 día (50% de probabilidad de lesión, no trabaja 7 días)\n"
-            "Mafioso: $20 día (50% de probabilidad de bono 200$)\n\n"
-            "Después de llenar la ficha, envía un mensaje **separado** usando:\n"
-            "   /profesion nombre_de_tu_profesion\n\n"
-            "Por ejemplo:\n"
-            "   /profesion medico\n\n"
-            "¡Listo! Luego recibirás $1000 de cortesía y podrás usar /work, /balance y /pay"
-
-            
-        )
-    else:
-        bot.reply_to(message, "Ya tienes una cuenta activa, usa tus comandos: /balance, /work, /pay")
-
-# =========================
-# PROFESIÓN
-# =========================
-@bot.message_handler(commands=["profesion"])
-def profesion(message):
-    user = get_user(message.from_user.id)
-    args = message.text.split()
-
-    if user["profesion"]:
-        bot.reply_to(message, f"❌ Ya tienes profesión: {user['profesion'].capitalize()}")
-        return
-
-    if len(args) < 2:
-        bot.reply_to(message, "Uso correcto:\n/profesion medico")
-        return
-
-    nombre = args[1].lower()
-
-    if nombre not in PROFESIONES:
-        bot.reply_to(message, "❌ Profesión inválida")
-        return
-
-    user["profesion"] = nombre
-    user["money"] = 1000  # Dinero de cortesía al elegir profesión
-    save_users()
-
-    bot.reply_to(
-        message,
-        f"✅ Profesión asignada: {nombre.capitalize()}\n"
-        f"💰 ¡Gracias por unirte a Lust Tower! Tus $1000 de cortesía han sido acreditados.\n\n"
-        "Ya puedes usar /work, /balance y /pay"
+    texto = (
+        f"👋 Bienvenido a Lust Tower, {message.from_user.first_name}!\n"
+        "Aquí manejamos nuestra propia economía. Por favor llena la siguiente ficha para recibir tus $1000 de cortesía al elegir tu profesión.\n\n"
+        "『INFORMACIÓN DEL CLIENTE』\n"
+        "【NOMBRE】\n"
+        "【EDAD】\n"
+        "【SEXO】\n"
+        "【TRABAJO】\n\n"
+        "(IMPORTANTE: Elige una profesión usando /profesion <nombre>, la elección es permanente)\n\n"
+        "Profesiones disponibles:\n"
+        "Medico, Programador, Policia, Inversionista, Mecanico, Chofer, Artista, Streamer, TS, Mercenario, Mafioso\n\n"
+        "【ALTURA】\n"
+        "【ORIENTACIÓN】\n"
+        "【GUSTOS】\n"
+        "【DISGUSTOS】\n"
+        "【HISTORIA DE VIDA】\n"
+        "【APARIENCIA】\n"
+        "(Adjuntar foto opcional)"
     )
+    bot.reply_to(message, texto)
 
 # =========================
-# COMANDO PARA RESETEAR PROFESIÓN (modo prueba)
-# =========================
-@bot.message_handler(commands=["resetprof"])
-def reset_profesion(message):
-    user = get_user(message.from_user.id)
-
-    if not user["profesion"]:
-        bot.reply_to(message, "❌ No tienes ninguna profesión asignada")
-        return
-
-    nombre = user["profesion"]
-    user["profesion"] = None
-    user["money"] = 0  # Opcional: reinicia dinero
-    save_users()
-
-    bot.reply_to(
-        message,
-        f"♻️ Tu profesión '{nombre.capitalize()}' ha sido removida.\n"
-        "Ahora puedes usar /profesion para elegir otra."
-    )
-
-# =========================
-# WORK (24H)
+# COMANDO /WORK
 # =========================
 @bot.message_handler(commands=["work"])
 def work(message):
     user = get_user(message.from_user.id)
-
-    if not user["profesion"]:
-        bot.reply_to(message, "❌ Debes elegir una profesión primero")
+    if user["profesion"] is None:
+        bot.reply_to(message, "❌ Debes elegir una profesión primero con /profesion <nombre>")
         return
 
-    ahora = time.time()
-    restante = COOLDOWN_WORK - (ahora - user["ultimo_work"])
+    now = datetime.now()
+    if user["last_work"]:
+        last = datetime.fromisoformat(user["last_work"])
+        if now - last < timedelta(hours=24):
+            remaining = timedelta(hours=24) - (now - last)
+            bot.reply_to(message, f"⏳ Ya trabajaste hoy. Puedes volver a trabajar en {remaining}")
+            return
 
-    if restante > 0:
-        horas = int(restante // 3600)
-        bot.reply_to(message, f"⏳ Debes esperar {horas} horas para trabajar otra vez")
-        return
+    prof = PROFESIONES[user["profesion"]]
+    dinero_ganado = prof["salario"]
 
-    datos = PROFESIONES[user["profesion"]]
-    ganancia = datos["salario"]
-    texto = f"💼 Profesión: {user['profesion'].capitalize()}\n💵 Base: ${ganancia}\n"
+    # Verificar bono
+    if prof["bono_prob"] > 0 and random.random() < prof["bono_prob"]:
+        dinero_ganado += prof["bono"]
+        bono_msg = f"🎉 ¡Bono recibido! +${prof['bono']}"
+    else:
+        bono_msg = ""
 
-    if random.random() < datos["bonus_chance"]:
-        ganancia += datos["bonus"]
-        if datos["bonus"] > 0:
-            texto += f"🎉 Evento especial: +${datos['bonus']}\n"
-        else:
-            texto += f"💥 Mal día: ${datos['bonus']}\n"
+    # Verificar penalización
+    if prof["penal_prob"] > 0 and random.random() < prof["penal_prob"]:
+        dinero_ganado -= prof["penal"]
+        penal_msg = f"⚠️ Penalización: -${prof['penal']}"
+    else:
+        penal_msg = ""
 
-    user["money"] += ganancia
-    user["ultimo_work"] = ahora
+    user["money"] += dinero_ganado
+    user["last_work"] = now.isoformat()
     save_users()
 
-    texto += f"💰 Ganancia total: ${ganancia}"
-    bot.reply_to(message, texto)
+    bot.reply_to(message, f"💼 Trabajaste como {user['profesion'].capitalize()} y ganaste ${dinero_ganado}\n{bono_msg} {penal_msg}")
 
 # =========================
-# BALANCE
+# COMANDO /BALANCE
 # =========================
 @bot.message_handler(commands=["balance"])
 def balance(message):
@@ -199,60 +173,88 @@ def balance(message):
     bot.reply_to(message, f"💰 Tu saldo actual es: ${user['money']}")
 
 # =========================
-# PAY
+# COMANDO /PAY
 # =========================
 @bot.message_handler(commands=["pay"])
 def pay(message):
-    args = message.text.split()
-
-    if len(args) < 3 or not message.entities:
-        bot.reply_to(message, "Uso:\n/pay @usuario monto")
+    user = get_user(message.from_user.id)
+    partes = message.text.split()
+    if len(partes) < 3:
+        bot.reply_to(message, "❗ Uso correcto: /pay @usuario <monto>")
         return
-
     try:
-        monto = int(args[2])
+        monto = int(partes[2])
     except:
-        bot.reply_to(message, "❌ Monto inválido")
+        bot.reply_to(message, "❌ Monto inválido.")
         return
-
-    if monto <= 0:
-        bot.reply_to(message, "❌ El monto debe ser positivo")
+    if user["money"] < monto:
+        bot.reply_to(message, "❌ No tienes suficiente dinero.")
         return
-
-    sender = get_user(message.from_user.id)
-
-    if sender["money"] < monto:
-        bot.reply_to(message, "❌ No tienes suficiente dinero")
+    # Obtener id del usuario mencionado
+    if not message.entities or message.entities[1].type != "mention":
+        bot.reply_to(message, "❌ Debes mencionar a un usuario válido.")
         return
-
-    for ent in message.entities:
-        if ent.type == "mention":
-            username = message.text[ent.offset:ent.offset + ent.length].replace("@", "")
+    username = partes[1].replace("@","")
+    # Buscamos el id en users
+    target_id = None
+    for uid, u in users.items():
+        if "username" in u and u["username"] == username:
+            target_id = uid
             break
-    else:
-        bot.reply_to(message, "❌ Debes mencionar a un usuario")
+    if target_id is None:
+        bot.reply_to(message, "❌ Usuario no encontrado.")
         return
-
-    recipient_id = None
-    for uid, data in users.items():
-        if data.get("username") == username:
-            recipient_id = uid
-            break
-
-    if recipient_id is None:
-        bot.reply_to(message, "❌ Usuario no encontrado en el sistema")
-        return
-
-    sender["money"] -= monto
-    users[recipient_id]["money"] += monto
+    user["money"] -= monto
+    users[target_id]["money"] += monto
     save_users()
-
-    bot.reply_to(
-        message,
-        f"💸 Transferencia exitosa\nEnviado: ${monto}"
-    )
+    bot.reply_to(message, f"✅ Transferencia exitosa: ${monto} a @{username}")
 
 # =========================
-print("Sistema económico activo y listo...")
-bot.infinity_polling(skip_pending=True)
+# COMANDO /REGLAS
+# =========================
+@bot.message_handler(commands=["reglas"])
+def reglas(message):
+    texto = (
+        "📜 Bienvenido a The Lust Tower!\n\n"
+        "Para una buena convivencia, por favor lee y respeta las reglas:\n\n"
+        "[TEMAS]\nEl grupo está dividido por temas. Respeta cada uno.\n\n"
+        "[EDAD]\nSolo para mayores de 18 años. Menores serán expulsados inmediatamente.\n\n"
+        "[SPAM]\nSolo se permite spam en su tema correspondiente y con permiso de un administrador.\n"
+        "Links no autorizados serán eliminados y su remitente podrá ser baneado.\n\n"
+        "[FICHAS y PROFESIONES]\nNecesitas ficha y profesión para rolear. Sin ellas recibirás un strike y deberás registrarte en 7 días.\n\n"
+        "[GALERÍA y SALA DE VIDEO]\nContenido adulto permitido, pero PROHIBIDO: pornografía infantil, zoofilia, gore, fetiches extremos, nudes de personas no verificadas, lolicon/shotacon.\n\n"
+        "[ACOSO]\nNo se tolera. Acoso en privado o grupo será motivo de expulsión.\n\n"
+        "[DATOS PERSONALES]\nRespeta la privacidad: no compartas datos propios o de otros.\n\n"
+        "[ROL]\nMantén inmersión usando canales correctos. Usa Offrol si hablas fuera de rol.\n\n"
+        "[ROL y REALIDAD]\nNo confundas el rol con la vida real.\n\n"
+        "[REPORTES]\nQuejas o reportes a administradores o canal de Reportes."
+    )
+    bot.reply_to(message, texto)
 
+# =========================
+# COMANDO /GUIA
+# =========================
+@bot.message_handler(commands=["guia"])
+def guia(message):
+    texto = (
+        "📖 **Guía de uso del Bot Lust Tower**\n\n"
+        "/start - Te da la bienvenida y una ficha para llenar si eres nuevo.\n"
+        "/profesion <nombre> - Te permite elegir una profesión (obligatoria, elección permanente).\n"
+        "/resetprof - Quitar tu profesión y elegir otra.\n"
+        "/work - Trabajar y ganar dinero (solo 1 vez cada 24 horas).\n"
+        "/pay @usuario <monto> - Transferir dinero a otro usuario.\n"
+        "/balance - Consultar saldo actual.\n"
+        "/reglas - Mostrar las reglas del grupo.\n"
+        "/guia - Mostrar esta guía de comandos.\n\n"
+        "💡 Recomendaciones:\n"
+        "1. Primero usa /start para registrarte y recibir tu ficha.\n"
+        "2. Luego selecciona tu profesión con /profesion <nombre>.\n"
+        "3. Después podrás usar /work para ganar dinero y /pay para transferirlo."
+    )
+    bot.reply_to(message, texto)
+
+# =========================
+# INICIAR BOT
+# =========================
+print("🤖 Sistema económico activo y persistente...")
+bot.infinity_polling()
