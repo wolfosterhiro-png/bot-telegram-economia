@@ -215,42 +215,19 @@ def pay(message):
 @bot.message_handler(commands=["reglas"])
 def reglas(message):
     texto = (
-        "REGLAS DE LA COMUNIDAD
-
-》EDAD Y LEGALIDAD
-
-Esta comunidad es exclusiva para mayores de 18 años.
-Cualquier falsificación, ocultamiento o encubrimiento de la edad real del usuario será motivo de expulsión inmediata y sin advertencia.
-
-》CONDUCTA Y SEGURIDAD
-
-El acoso está estrictamente prohibido. Esta es una comunidad de rol, no un espacio para buscar pareja ni para insistir en interacciones personales fuera del rol.
-Cualquier comportamiento insistente, invasivo o incómodo será sancionado.
-La exposición de datos personales de otro miembro, excepto la edad, será motivo de expulsión inmediata.
-Se recomienda mantener toda información personal en privado para evitar conflictos.
-
-》CONTENIDO +18
-
-En los temas “GALERÍA DE FOTOS” y “GALERÍA DE VIDEOS” se permite contenido +18, con las siguientes prohibiciones absolutas:
-
-• Pornografía infantil (incluyendo lolicon y shotacon)
-• Gore
-• Nudes personales
-• Zoofilia o cualquier contenido ilegal
-
-La publicación de cualquiera de estos contenidos resultará en expulsión directa.
-
-》USO DE TEMAS
-
-La comunidad está dividida por temas específicos que deben ser respetados y utilizados correctamente.
-El spam está permitido únicamente en el tema “CARTELERA”. Publicaciones fuera de esta sección serán sancionadas.
-
-》NORMAS DE ROL
-
-Para participar en el rol es obligatorio contar con una ficha de personaje y elegir una profesión.
-Dicha información deberá registrarse en un plazo máximo de 7 días desde el ingreso a la comunidad.
-El incumplimiento de esta norma resultará en la aplicación de un strike."
-
+        "📜 Bienvenido a The Lust Tower!\n\n"
+        "Para una buena convivencia, por favor lee y respeta las reglas:\n\n"
+        "[TEMAS]\nEl grupo está dividido por temas. Respeta cada uno.\n\n"
+        "[EDAD]\nSolo para mayores de 18 años. Menores serán expulsados inmediatamente.\n\n"
+        "[SPAM]\nSolo se permite spam en su tema correspondiente y con permiso de un administrador.\n"
+        "Links no autorizados serán eliminados y su remitente podrá ser baneado.\n\n"
+        "[FICHAS y PROFESIONES]\nNecesitas ficha y profesión para rolear. Sin ellas recibirás un strike y deberás registrarte en 7 días.\n\n"
+        "[GALERÍA y SALA DE VIDEO]\nContenido adulto permitido, pero PROHIBIDO: pornografía infantil, zoofilia, gore, fetiches extremos, nudes de personas no verificadas, lolicon/shotacon.\n\n"
+        "[ACOSO]\nNo se tolera. Acoso en privado o grupo será motivo de expulsión.\n\n"
+        "[DATOS PERSONALES]\nRespeta la privacidad: no compartas datos propios o de otros.\n\n"
+        "[ROL]\nMantén inmersión usando canales correctos. Usa Offrol si hablas fuera de rol.\n\n"
+        "[ROL y REALIDAD]\nNo confundas el rol con la vida real.\n\n"
+        "[REPORTES]\nQuejas o reportes a administradores o canal de Reportes."
     )
     bot.reply_to(message, texto)
 
@@ -281,4 +258,3 @@ def guia(message):
 # =========================
 print("🤖 Sistema económico activo y persistente...")
 bot.infinity_polling()
-
