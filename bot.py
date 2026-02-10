@@ -44,5 +44,6 @@ def work(message):
         "🛠 Trabajaste y ganaste $20"
     )
 
-print("Sistema económico activo...")
-bot.polling()
+print("Sistema económico activo y escuchando...")
+
+bot.infinity_polling()
